@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extentreports>
+    <configuration>
+        <!-- ===================================== -->
+        <!-- 🧩 Basic Report Settings -->
+        <!-- ===================================== -->
+        <theme>STANDARD</theme>
+        <encoding>UTF-8</encoding>
+        <protocol>HTTPS</protocol>
+
+        <documentTitle>Test Execution Summary</documentTitle>
+        <reportName>Automation Execution Report</reportName>
+        <timeStampFormat>MMM dd, yyyy HH:mm:ss</timeStampFormat>
+
+        <!-- ===================================== -->
+        <!-- 📸 Screenshot Enhancements -->
+        <!-- ===================================== -->
+        <enableBase64>true</enableBase64>
+        <thumbnailForBase64>true</thumbnailForBase64>
+
+        <!-- ===================================== -->
+        <!-- 🎨 Custom CSS Styling -->
+        <!-- ===================================== -->
+        <css><![CDATA[
+            body {
+                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background: #f9f9f9;
+            }
+            .test-body img {
+                max-width: 100% !important;
+                height: auto !important;
+                display: block;
+                margin: 12px 0;
+                border-radius: 8px;
+                border: 2px solid #ccc;
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+                transition: transform 0.2s ease-in-out;
+            }
+            .test-body img:hover {
+                transform: scale(1.03);
+                cursor: zoom-in;
+            }
+            .test-body {
+                background-color: #ffffff;
+                border-radius: 8px;
+                padding: 10px 15px;
+            }
+            .node.pass .test-body {
+                border-left: 4px solid #28a745;
+            }
+            .node.fail .test-body {
+                border-left: 4px solid #dc3545;
+            }
+            .pass { color: #28a745 !important; font-weight: 600; }
+            .fail { color: #dc3545 !important; font-weight: 600; }
+            .skip { color: #ff9800 !important; font-weight: 600; }
+            .category-badge {
+                background-color: #007bff !important;
+                border-radius: 12px;
+                padding: 3px 8px;
+                color: #fff !important;
+                font-size: 0.75rem;
+            }
+        ]]></css>
+
+        <!-- ===================================== -->
+        <!-- 🖱 Click-to-Zoom JavaScript -->
+        <!-- ===================================== -->
+        <js><![CDATA[
+            $(document).ready(function() {
+                $('img').click(function() {
+                    var src = $(this).attr('src');
+                    var modal = '<div id="imgModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="$(this).remove();">' +
+                                '<img src="' + src + '" style="max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 0 25px rgba(255,255,255,0.5);">' +
+                                '</div>';
+                    $('body').append(modal);
+                });
+            });
+        ]]></js>
+    </configuration>
+</extentreports>

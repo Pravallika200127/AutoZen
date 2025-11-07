@@ -1,4 +1,5 @@
-name: 🧩 AutoZen Cross-Browser CI/CD Pipeline
+
+name:  AutoZen Cross-Browser CI/CD Pipeline
 
 on:
   push:
@@ -11,8 +12,8 @@ on:
       - main
       - develop
   schedule:
-    - cron: '30 1 * * *' # ⏰ Daily at 7:00 AM IST
-  workflow_dispatch:
+    # Run daily at 7:00 AM IST (01:30 UTC)
+    - cron: '30 1 * * *'
 
 jobs:
   test:
@@ -33,7 +34,7 @@ jobs:
             os: macos-latest
 
     env:
-      JAVA_VERSION: 21
+      JAVA_VERSION: 17
       MAVEN_OPTS: -Xmx2048m
       HEADLESS: true
       TESTRAIL_ENABLED: true
@@ -41,46 +42,65 @@ jobs:
       TESTRAIL_APIKEY: ${{ secrets.TESTRAIL_APIKEY }}
 
     steps:
-      - name: 📥 Checkout Repository
+      # ==========================================================
+      #  Step 1: Checkout Repo
+      # ==========================================================
+      - name:  Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
+      # ==========================================================
+      #  Step 2: Set up Java
+      # ==========================================================
+      - name:  Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
           cache: maven
 
-      - name: 🧩 Install Chrome
+      # ==========================================================
+      #  Step 3: Install Browser Drivers
+      # ==========================================================
+      - name:  Set up Browser Drivers
         if: matrix.browser == 'chrome'
         uses: browser-actions/setup-chrome@v1
 
-      - name: 🧩 Install Firefox
+      - name:  Set up Firefox
         if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
 
-      - name: 🧩 Install Edge
+      - name:  Set up Edge
         if: matrix.browser == 'edge'
         uses: browser-actions/setup-edge@v1
 
-      - name: 🧩 Enable Safari
+      # Safari is preinstalled on macOS
+      - name:  Verify Safari
         if: matrix.browser == 'safari'
         run: |
-          echo "✅ Safari available"
+          echo " Safari is available on macOS"
           safaridriver --enable || true
-
-      - name: 🧱 Cache Maven
+      # ==========================================================
+      #  Step 4: Cache Maven Dependencies
+      # ==========================================================
+      - name:  Cache Maven Repo
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: maven-
 
-      - name: ⚙️ Build
+      # ==========================================================
+      #  Step 5: Build & Compile
+      # ==========================================================
+      - name:  Build Project
         run: mvn clean compile -B
 
-      - name: 🚀 Run Tests
+      # ==========================================================
+      #  Step 6: Run Tests
+      # ==========================================================
+      - name:  Run Tests on ${{ matrix.browser }}
         run: |
+          echo " Running tests on ${{ matrix.browser }}..."
           mvn test -Dsurefire.suiteXmlFiles=testng.xml \
                    -Dbrowser=${{ matrix.browser }} \
                    -Dheadless=${{ env.HEADLESS }} \
@@ -89,17 +109,14 @@ jobs:
                    -Dtestrail.enabled=${{ env.TESTRAIL_ENABLED }}
         continue-on-error: true
 
-      - name: 📊 Upload Reports
+      # ==========================================================
+      #  Step 7: Upload Reports
+      # ==========================================================
+      - name:  Upload Extent Report (${{ matrix.browser }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ExtentReport-${{ matrix.browser }}
           path: |
             test-output/ExtentReport.html
-            test-output/Screenshots/
-
-      - name: 🧾 Summary
-        if: always()
-        run: |
-          echo "✅ All browser runs complete."
-          echo "💾 Reports saved under GitHub Artifacts."
+            test-output/screenshots/

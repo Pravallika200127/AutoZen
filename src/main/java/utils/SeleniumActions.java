@@ -4,8 +4,6 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import org.testng.Assert;
-
 import drivers.DriverFactory;
 import java.time.Duration;
 import java.util.List;
@@ -208,68 +206,25 @@ public class SeleniumActions {
      * - Fails hard if expected text does not match or appear in actual
      */
     public void verifyTextEquals(By locator, String expectedText) {
-        try {
-            WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
-            String actualText = element.getText().trim();
-
-            // Normalize for consistent comparison
-            String expectedNorm = expectedText.replaceAll("\\s+", " ").trim();
-            String actualNorm = actualText.replaceAll("\\s+", " ").trim();
-            if (!actualText.contains(expectedText)) {
-                String error = "Expected Output Mismatch: Expected text to contain '" + expectedText + 
-                             "' but actual text is '" + actualText + "' - Locator: " + locator.toString();
-                captureFailure(error, new AssertionError(error));
-                throw new AssertionError(error);
+          try {
+                WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                String actualText = element.getText().trim();
+                
+                if (!actualText.contains(expectedText)) {
+                    String error = "Expected Output Mismatch: Expected text to contain '" + expectedText + 
+                                 "' but actual text is '" + actualText + "' - Locator: " + locator.toString();
+                    captureFailure(error, new AssertionError(error));
+                    throw new AssertionError(error);
+                }
+                System.out.println("✅ Text contains verification passed: " + expectedText);
+            } catch (AssertionError e) {
+                throw e;
+            } catch (Exception e) {
+                String error = "Failed to verify text contains - Locator: " + locator.toString() + " - " + e.getMessage();
+                captureFailure(error, e);
+                throw new RuntimeException(error, e);
             }
-            System.out.println("🔍 Verifying text at " + locator);
-            System.out.println("   ➤ Expected: " + expectedNorm);
-            System.out.println("   ➤ Actual:   " + actualNorm);
-
-            // ✅ Case-insensitive exact match
-            if (actualNorm.equalsIgnoreCase(expectedNorm)) {
-                System.out.println("✅ Exact match found: '" + expectedNorm + "'");
-                return;
-            }
-
-            // ⚠️ Partial match tolerated (still counted as pass but warned)
-            if (actualNorm.toLowerCase().contains(expectedNorm.toLowerCase())) {
-                System.out.println("⚠️ Partial match (tolerated): Expected '" + expectedText +
-                        "' found inside actual text '" + actualText + "'");
-                return;
-            }
-
-            // ❌ Hard assertion fail if mismatch
-            String error = "❌ Text Mismatch Detected:\n" +
-                    "   Expected: '" + expectedText + "'\n" +
-                    "   But Found: '" + actualText + "'\n" +
-                    "   Locator: " + locator;
-
-            // Capture screenshot for evidence
-            captureFailure(error, new AssertionError(error));
-
-            // Fail immediately with assertion
-            Assert.fail(error);
-
-        } catch (NoSuchElementException e) {
-            String error = "❌ Element not found for text verification: " + locator;
-            captureFailure(error, e);
-            Assert.fail(error);
-
-        } catch (TimeoutException e) {
-            String error = "❌ Timeout waiting for element: " + locator;
-            captureFailure(error, e);
-            Assert.fail(error);
-
-        } catch (AssertionError e) {
-            // Already logged above
-            throw e;
-
-        } catch (Exception e) {
-            String error = "❌ Unexpected error during text verification at " + locator + ": " + e.getMessage();
-            captureFailure(error, e);
-            Assert.fail(error);
         }
-    }
 
 
     /**

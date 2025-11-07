@@ -6,7 +6,7 @@ import org.openqa.selenium.WebElement;
 public class PageLocators {
     
     // ==================== Login/Authentication ====================
-    public static final By LOGIN_USERNAME_INPUT = By.id("usernames");
+    public static final By LOGIN_USERNAME_INPUT = By.id("username");
     public static final By LOGIN_PASSWORD_INPUT = By.id("password");
     public static final By LOGIN_SUBMIT_BUTTON = By.id("submitbtn");
 

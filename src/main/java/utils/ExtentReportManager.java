@@ -178,13 +178,24 @@ public class ExtentReportManager {
         try {
             if (extent != null) {
                 extent.flush();
-                System.out.println("💾 Extent Report saved to: " + REPORT_PATH);
-                System.out.println("📊 Scenarios logged: " + scenarioMap.size());
+                Thread.sleep(1000); // ensure file system has time to write changes
+                System.out.println("💾 Extent Report flushed successfully to: " + REPORT_PATH);
+
+                // Ensure file exists and is non-empty
+                java.io.File file = new java.io.File(REPORT_PATH);
+                if (file.exists() && file.length() > 1000) {
+                    System.out.println("📊 Verified ExtentReport.html (size: " + file.length() / 1024 + " KB)");
+                } else {
+                    System.err.println("⚠️ ExtentReport.html not found or empty after flush!");
+                }
+            } else {
+                System.err.println("⚠️ ExtentReports instance is null — cannot flush");
             }
         } catch (Exception e) {
-            System.err.println("⚠️ Error flushing Extent report: " + e.getMessage());
+            System.err.println("❌ Error flushing Extent report: " + e.getMessage());
         }
     }
+
 
     // ==========================================================
     // 🔹 Utility

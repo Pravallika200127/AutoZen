@@ -1,5 +1,4 @@
-
-name:  AutoZen Cross-Browser CI/CD Pipeline
+name: 🧩 AutoZen Cross-Browser CI/CD Pipeline
 
 on:
   push:
@@ -12,8 +11,9 @@ on:
       - main
       - develop
   schedule:
-    # Run daily at 7:00 AM IST (01:30 UTC)
-    - cron: '30 1 * * *'
+    # Runs daily at 7:30 AM IST (02:00 UTC)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 jobs:
   test:
@@ -34,7 +34,7 @@ jobs:
             os: macos-latest
 
     env:
-      JAVA_VERSION: 17
+      JAVA_VERSION: 21
       MAVEN_OPTS: -Xmx2048m
       HEADLESS: true
       TESTRAIL_ENABLED: true
@@ -43,15 +43,15 @@ jobs:
 
     steps:
       # ==========================================================
-      #  Step 1: Checkout Repo
+      #  Step 1: Checkout Repository
       # ==========================================================
-      - name:  Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
       # ==========================================================
-      #  Step 2: Set up Java
+      #  Step 2: Set up Java (Temurin JDK)
       # ==========================================================
-      - name:  Set up JDK ${{ env.JAVA_VERSION }}
+      - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
@@ -61,28 +61,29 @@ jobs:
       # ==========================================================
       #  Step 3: Install Browser Drivers
       # ==========================================================
-      - name:  Set up Browser Drivers
+      - name: 🧩 Set up Chrome
         if: matrix.browser == 'chrome'
         uses: browser-actions/setup-chrome@v1
 
-      - name:  Set up Firefox
+      - name: 🧩 Set up Firefox
         if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
 
-      - name:  Set up Edge
+      - name: 🧩 Set up Edge
         if: matrix.browser == 'edge'
         uses: browser-actions/setup-edge@v1
 
       # Safari is preinstalled on macOS
-      - name:  Verify Safari
+      - name: 🧩 Enable Safari
         if: matrix.browser == 'safari'
         run: |
-          echo " Safari is available on macOS"
+          echo "✅ Safari available on macOS"
           safaridriver --enable || true
+
       # ==========================================================
       #  Step 4: Cache Maven Dependencies
       # ==========================================================
-      - name:  Cache Maven Repo
+      - name: 📦 Cache Maven Dependencies
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
@@ -90,29 +91,31 @@ jobs:
           restore-keys: maven-
 
       # ==========================================================
-      #  Step 5: Build & Compile
+      #  Step 5: Build Project
       # ==========================================================
-      - name:  Build Project
+      - name: ⚙️ Build Project
         run: mvn clean compile -B
 
       # ==========================================================
-      #  Step 6: Run Tests
+      #  Step 6: Run Cross-Browser Tests
       # ==========================================================
-      - name:  Run Tests on ${{ matrix.browser }}
+      - name: 🚀 Run Tests on ${{ matrix.browser }}
         run: |
-          echo " Running tests on ${{ matrix.browser }}..."
-          mvn test -Dsurefire.suiteXmlFiles=testng.xml \
-                   -Dbrowser=${{ matrix.browser }} \
-                   -Dheadless=${{ env.HEADLESS }} \
-                   -Dtestrail.username="${{ secrets.TESTRAIL_USERNAME }}" \
-                   -Dtestrail.apikey="${{ secrets.TESTRAIL_APIKEY }}" \
-                   -Dtestrail.enabled=${{ env.TESTRAIL_ENABLED }}
-        continue-on-error: true
+          echo "🧪 Running tests on ${{ matrix.browser }}..."
+          mvn test \
+            -Dsurefire.suiteXmlFiles=testng.xml \
+            -Dbrowser=${{ matrix.browser }} \
+            -Dheadless=${{ env.HEADLESS }} \
+            -Dtestrail.labels=Autozentestsuite \
+            -Dtestrail.username="${{ secrets.TESTRAIL_USERNAME }}" \
+            -Dtestrail.apikey="${{ secrets.TESTRAIL_APIKEY }}" \
+            -Dtestrail.enabled=${{ env.TESTRAIL_ENABLED }}
+        continue-on-error: false
 
       # ==========================================================
-      #  Step 7: Upload Reports
+      #  Step 7: Upload Artifacts (Extent Reports)
       # ==========================================================
-      - name:  Upload Extent Report (${{ matrix.browser }})
+      - name: 📊 Upload Extent Report (${{ matrix.browser }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -120,3 +123,13 @@ jobs:
           path: |
             test-output/ExtentReport.html
             test-output/screenshots/
+
+      # ==========================================================
+      #  Step 8: Summary
+      # ==========================================================
+      - name: 🧾 Summary
+        if: always()
+        run: |
+          echo "✅ All cross-browser executions completed."
+          echo "💾 Extent Reports saved in GitHub Artifacts."
+          echo "🔗 TestRail results automatically updated for label: Autozentestsuite."

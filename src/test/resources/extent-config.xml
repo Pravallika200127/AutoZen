@@ -8,8 +8,8 @@
         <encoding>UTF-8</encoding>
         <protocol>HTTPS</protocol>
 
-        <documentTitle>Test Execution Summary</documentTitle>
-        <reportName>Automation Execution Report</reportName>
+        <documentTitle>Automation Execution Summary</documentTitle>
+        <reportName>Test Execution Report</reportName>
         <timeStampFormat>MMM dd, yyyy HH:mm:ss</timeStampFormat>
 
         <!-- ===================================== -->
@@ -26,34 +26,52 @@
                 font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 background: #f9f9f9;
             }
+
+            .test-content {
+                border-radius: 8px;
+                padding: 10px;
+                background: #fff;
+                margin-bottom: 15px;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            }
+
             .test-body img {
                 max-width: 100% !important;
-                height: auto !important;
-                display: block;
-                margin: 12px 0;
                 border-radius: 8px;
                 border: 2px solid #ccc;
-                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-                transition: transform 0.2s ease-in-out;
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+                margin-top: 10px;
+                transition: transform 0.25s ease-in-out;
             }
+
             .test-body img:hover {
-                transform: scale(1.03);
+                transform: scale(1.05);
                 cursor: zoom-in;
             }
-            .test-body {
-                background-color: #ffffff;
-                border-radius: 8px;
-                padding: 10px 15px;
-            }
+
             .node.pass .test-body {
-                border-left: 4px solid #28a745;
+                border-left: 5px solid #28a745;
             }
+
             .node.fail .test-body {
-                border-left: 4px solid #dc3545;
+                border-left: 5px solid #dc3545;
             }
-            .pass { color: #28a745 !important; font-weight: 600; }
-            .fail { color: #dc3545 !important; font-weight: 600; }
-            .skip { color: #ff9800 !important; font-weight: 600; }
+
+            .pass {
+                color: #28a745 !important;
+                font-weight: bold;
+            }
+
+            .fail {
+                color: #dc3545 !important;
+                font-weight: bold;
+            }
+
+            .skip {
+                color: #ff9800 !important;
+                font-weight: bold;
+            }
+
             .category-badge {
                 background-color: #007bff !important;
                 border-radius: 12px;
@@ -61,19 +79,31 @@
                 color: #fff !important;
                 font-size: 0.75rem;
             }
+
+            .step-duration {
+                font-size: 0.8rem;
+                color: #777;
+                margin-left: 10px;
+            }
         ]]></css>
 
         <!-- ===================================== -->
-        <!-- 🖱 Click-to-Zoom JavaScript -->
+        <!-- 🖱️ Click-to-Zoom Script -->
         <!-- ===================================== -->
         <js><![CDATA[
             $(document).ready(function() {
-                $('img').click(function() {
+                $('img').on('click', function() {
                     var src = $(this).attr('src');
-                    var modal = '<div id="imgModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="$(this).remove();">' +
-                                '<img src="' + src + '" style="max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 0 25px rgba(255,255,255,0.5);">' +
-                                '</div>';
-                    $('body').append(modal);
+                    var overlay = `
+                        <div id="zoomOverlay"
+                             style="position:fixed;top:0;left:0;width:100%;height:100%;
+                             background:rgba(0,0,0,0.85);z-index:9999;display:flex;
+                             align-items:center;justify-content:center;">
+                             <img src="` + src + `" style="max-width:90%;max-height:90%;border-radius:10px;
+                             box-shadow:0 0 25px rgba(255,255,255,0.5);">
+                        </div>`;
+                    $('body').append(overlay);
+                    $('#zoomOverlay').click(function() { $(this).remove(); });
                 });
             });
         ]]></js>

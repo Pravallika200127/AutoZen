@@ -231,4 +231,23 @@ public class ConfigReader {
         loadProperties();
         loadTestData();
     }
+    // ===============================
+    // 🔹 Runtime (In-Memory) Properties
+    // ===============================
+    private static final Map<String, String> runtimeProps = new HashMap<>();
+
+    /**
+     * Stores a runtime-only key-value pair (used for shared data like TestRail runId).
+     */
+    public static void setRuntimeProperty(String key, String value) {
+        System.setProperty(key, value);
+    }
+
+    /**
+     * Retrieves a runtime property value or a default if not set.
+     */
+    public static String getRuntimeProperty(String key, String defaultValue) {
+        return runtimeProps.getOrDefault(key, defaultValue);
+    }
+
 }

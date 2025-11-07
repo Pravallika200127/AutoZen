@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Cucumber" time="16.462" tests="1" skipped="0" failures="0" errors="0">
+<testcase classname="TC01_LOGIN" name="TC01_LOGIN" time="9.725">
+<system-out><![CDATA[
+Given User opens the login page.............................................passed
+When User enters valid credentials..........................................passed
+]]></system-out>
+</testcase>
+</testsuite>

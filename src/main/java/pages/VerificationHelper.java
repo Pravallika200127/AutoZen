@@ -419,54 +419,48 @@ public class VerificationHelper {
 
             // Small stabilization pause
             Thread.sleep(2000);
-
-            String primaryXpath = "(//a[contains(@class,'btn btn-primary')])[2]";
-            String fallbackXpath = "//div[@class='fs-3 fw-semibold text-primary text-nowrap']//small[contains(text(),'Go To MyAthens')]";
-
-            WebElement element = null;
-
-            // Try primary locator first
-            try {
-                List<WebElement> elements = driver.findElements(By.xpath(primaryXpath));
-                element = elements.stream()
-                        .filter(WebElement::isDisplayed)
-                        .findFirst()
-                        .orElse(null);
-            } catch (Exception e) {
-                System.out.println("⚠️ Primary locator lookup failed: " + e.getMessage());
-            }
-
-            // Fallback if primary element not found
-            if (element == null) {
-                element = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(fallbackXpath)));
-            }
-
-            if (element == null) {
-                throw new NoSuchElementException("❌ Could not find CTA element for text: " + ctaText);
-            }
-
-            // ✅ Scroll element into center view
-            ((JavascriptExecutor) driver).executeScript(
-                    "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});",
-                    element
-            );
-            Thread.sleep(500); // small delay to ensure smooth scroll
-
-            // ✅ Highlight for visibility
-            highlightAndCapture(element);
-
-            // ✅ Click using JS for reliability
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
-
-            System.out.println("✅ Successfully clicked '" + ctaText + "'");
-
-        } catch (Exception e) {
-            String error = "❌ Failed to click '" + ctaText + "': " + e.getMessage();
-           
-            throw new RuntimeException(error, e);
-        }
+    
+    String primaryXpath = "(//div[@class='fs-3 fw-semibold text-primary text-nowrap']//a[@class='btn btn-primary'])[2]";
+    String fallbackXpath = "(//div[@class='fs-3 fw-semibold text-primary text-nowrap']//a[@class='btn btn-primary'])[2]";
+    WebElement element = null;
+    
+    // Try primary xpath
+    try {
+        List<WebElement> elements = driver.findElements(By.xpath(primaryXpath));
+        element = elements.stream()
+            .filter(WebElement::isDisplayed)
+            .findFirst()
+            .orElse(null);
+    } catch (Exception e) {
+        System.out.println("Primary xpath failed, trying fallback");
     }
-
+    
+    // Try fallback if primary failed
+    if (element == null) {
+        element = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.xpath(fallbackXpath))
+        );
+    }
+    
+    if (element == null) {
+        throw new NoSuchElementException("Could not find '" + ctaText + "' button");
+    }
+    
+    // Highlight and capture
+    highlightAndCapture(element);
+    
+    // Click with JS
+    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+    
+    System.out.println("Successfully clicked '" + ctaText + "'");
+    
+} catch (Exception e) {
+    throw new RuntimeException(
+        "Failed to click '" + ctaText + "': " + e.getMessage(), 
+        e
+    );
+}
+}
     
     private void scrollToCenter(String ctaText) {
     	 try {

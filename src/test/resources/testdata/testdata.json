@@ -1,0 +1,23 @@
+{
+  "C40": {
+	"password": "Pravallika@2001",
+	    "loginURL": "https://idp.bits-pilani.ac.in/idp/Authn/UserPassword",
+	    "username": "2021hx70001@wilp.bits-pilani.ac.in"
+  },
+  "C296": {
+	"loginURL": "https://idp.bits-pilani.ac.in/idp/Authn/UserPassword",
+	    "username": "2021hx70001@wilp.bits-pilani.ac.in",
+	    "password": "Pravallika@2001",
+	    "myAcademics": "My Academics",
+	    "examinations": "Examinations",
+	    "studentServices": "Student Services",
+	    "wilpPolicies": "WILP Policies",
+	    "studentSupport": "Student Support",
+	    "Mycourses": "My Courses",
+	    "availableCourse": "Dissertation (S2-24_SEHEXZG628T)",
+	    "courseURL": "https://taxila-aws.bits-pilani.ac.in/course/view.php?id=15265",
+	    "courseTitle": "Dissertation (S2-24_SEHEXZG628T)",
+	    "elibraryURL": "https://my.openathens.net/?passiveLogin=false",
+	    "dissertationStatus": "Dissertation Evaluation Progress and Status"
+  }
+}

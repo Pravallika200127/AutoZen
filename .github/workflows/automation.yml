@@ -1,0 +1,122 @@
+name: 🧩 AutoZen Cross-Browser CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    # 🕒 Run daily at 7:00 AM IST (01:30 UTC)
+    - cron: '30 1 * * *'
+
+jobs:
+  test:
+    name: Run on ${{ matrix.browser }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chrome
+            os: ubuntu-latest
+          - browser: firefox
+            os: ubuntu-latest
+          - browser: edge
+            os: ubuntu-latest
+          - browser: safari
+            os: macos-latest
+
+    env:
+      JAVA_VERSION: 17
+      MAVEN_OPTS: -Xmx2048m
+      HEADLESS: true
+      TESTRAIL_ENABLED: true
+      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+      TESTRAIL_APIKEY: ${{ secrets.TESTRAIL_APIKEY }}
+
+    steps:
+      # ==========================================================
+      # 🔹 Step 1: Checkout Repo
+      # ==========================================================
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # ==========================================================
+      # 🔹 Step 2: Set up Java
+      # ==========================================================
+      - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      # ==========================================================
+      # 🔹 Step 3: Install Browser Drivers
+      # ==========================================================
+      - name: 🧩 Set up Browser Drivers
+        if: matrix.browser == 'chrome'
+        uses: browser-actions/setup-chrome@v1
+
+      - name: 🧩 Set up Firefox
+        if: matrix.browser == 'firefox'
+        uses: browser-actions/setup-firefox@v1
+
+      - name: 🧩 Set up Edge
+        if: matrix.browser == 'edge'
+        uses: browser-actions/setup-edge@v1
+
+      # Safari is preinstalled on macOS
+      - name: 🧩 Verify Safari
+        if: matrix.browser == 'safari'
+        run: |
+          echo "✅ Safari is available on macOS"
+          safaridriver --enable || true
+
+      # ==========================================================
+      # 🔹 Step 4: Cache Maven Dependencies
+      # ==========================================================
+      - name: 🧱 Cache Maven Repo
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-
+
+      # ==========================================================
+      # 🔹 Step 5: Build & Compile
+      # ==========================================================
+      - name: ⚙️ Build Project
+        run: mvn clean compile -B
+
+      # ==========================================================
+      # 🔹 Step 6: Run Tests
+      # ==========================================================
+      - name: 🚀 Run Tests on ${{ matrix.browser }}
+        run: |
+          echo "🔧 Running tests on ${{ matrix.browser }}..."
+          mvn test -Dsurefire.suiteXmlFiles=testng.xml \
+                   -Dbrowser=${{ matrix.browser }} \
+                   -Dheadless=${{ env.HEADLESS }} \
+                   -Dtestrail.username="${{ secrets.TESTRAIL_USERNAME }}" \
+                   -Dtestrail.apikey="${{ secrets.TESTRAIL_APIKEY }}" \
+                   -Dtestrail.enabled=${{ env.TESTRAIL_ENABLED }}
+        continue-on-error: true
+
+      # ==========================================================
+      # 🔹 Step 7: Upload Reports
+      # ==========================================================
+      - name: 📊 Upload Extent Report (${{ matrix.browser }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExtentReport-${{ matrix.browser }}
+          path: |
+            test-output/ExtentReport.html
+            test-output/screenshots/

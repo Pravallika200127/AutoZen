@@ -193,21 +193,18 @@ public class Hooks implements ConcurrentEventListener {
 
                     Integer resultId = testRailClient.updateTestResult(caseId, passed, comment);
 
-                    if (resultId != null && resultId > 0) {
-                        File extentFile = new File(System.getProperty("user.dir") + "/test-output/ExtentReport.html");
-                        if (extentFile.exists()) testRailClient.uploadAttachmentToResult(resultId, extentFile);
+                 // Force flush before upload to ensure ExtentReport.html exists
+                    ExtentReportManager.flushReports();
 
-                        if (drv != null) {
-                            byte[] bytes = ((TakesScreenshot) drv).getScreenshotAs(OutputType.BYTES);
-                            File shot = saveScreenshotToFile(bytes, scenario.getName());
-                            if (shot != null) testRailClient.uploadAttachmentToResult(resultId, shot);
-                        }
-
-                        if (!passed) createDetailedDefect(scenario, caseId, resultId);
+                    File extentFile = new File(ExtentReportManager.getReportPath());
+                    if (extentFile.exists() && extentFile.length() > 1000) {
+                        System.out.println("📤 Uploading ExtentReport.html to TestRail...");
+                        testRailClient.uploadAttachmentToResult(resultId, extentFile);
+                    } else {
+                        System.err.println("⚠️ ExtentReport.html missing or empty — skipping TestRail upload.");
                     }
-                }
-            }
-        } catch (Exception e) {
+                } }}
+         catch (Exception e) {
             System.err.println("⚠️ afterScenario error: " + e.getMessage());
         } finally {
             if (drv != null) DriverFactory.quitDriver();
@@ -215,6 +212,7 @@ public class Hooks implements ConcurrentEventListener {
             ExtentReportManager.clearCurrentScenario();
         }
     }
+            
 
     // ==========================================================
     // 🔹 Utility Methods
@@ -291,9 +289,12 @@ public class Hooks implements ConcurrentEventListener {
     @AfterAll
     public static void afterAll() {
         try {
+            System.out.println("📄 Finalizing Extent Reports...");
             ExtentReportManager.flushReports();
-            if (testRailEnabled && runId > 0) testRailClient.closeTestRun();
+            if (testRailEnabled && runId > 0)
+                testRailClient.closeTestRun();
         } catch (Exception ignored) {}
-        System.out.println("💾 Extent Report flushed successfully.");
+        System.out.println("💾 Extent Report flushed successfully at suite end.");
     }
+
 }

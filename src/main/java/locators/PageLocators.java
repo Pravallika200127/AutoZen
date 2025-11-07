@@ -33,7 +33,7 @@ public class PageLocators {
     public static final By VIVA_PROJECT_SECTION_BUTTON = By.xpath("//button[contains(text(),'Viva/Project')]");
     public static final By GO_TO_VIVA_PROJECT_CTA = By.xpath("//button[contains(text(),'Go to Viva/Project portal')]");
     public static final By ELIBRARY_SECTION_BUTTON = By.xpath("(//a[@class='btn btn-primary'])[2]");
-    public static final By VIRTUAL_LABS_SECTION= By.xpath("//section[@id='myVirtualLabs']");
+    public static final By VIRTUAL_LABS_SECTION= By.xpath("//section[@id='myVirtualLabs']//div[@class='container-fluid py-5 px-3 bg-body']");
 
     // ==================== Sections and Courses ====================
     public static final By AVAILABLE_COURSES_TITLE = By.xpath("//h5[normalize-space()='Dissertation (S2-24_SEHEXZG628T)']");

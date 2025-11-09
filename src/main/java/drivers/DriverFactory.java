@@ -40,14 +40,11 @@ public class DriverFactory {
     // 🔹 Create WebDriver Based on Browser Config
     // ==========================================================
     private static WebDriver createDriver() {
-        browserName = System.getProperty("browser",
-                ConfigReader.get("browser", "chrome")).toLowerCase();
-        boolean isHeadless = Boolean.parseBoolean(System.getProperty(
-                "headless", ConfigReader.get("headless", "false")));
+        browserName = System.getProperty("browser", ConfigReader.get("browser", "chrome")).toLowerCase();
+        boolean isHeadless = Boolean.parseBoolean(System.getProperty("headless", ConfigReader.get("headless", "false")));
+        WebDriver webDriver = null;
 
-        WebDriver webDriver;
-        System.out.println("🌐 Initializing " + browserName + " browser..."
-                + (isHeadless ? " (Headless Mode)" : ""));
+        System.out.println("🌐 Initializing " + browserName + " browser..." + (isHeadless ? " (Headless Mode)" : ""));
 
         try {
             switch (browserName) {
@@ -58,17 +55,15 @@ public class DriverFactory {
                     WebDriverManager.chromedriver().setup();
                     ChromeOptions chromeOptions = new ChromeOptions();
                     chromeOptions.addArguments("--remote-allow-origins=*");
-                    chromeOptions.addArguments("--disable-notifications");
-                    chromeOptions.addArguments("--disable-popup-blocking");
+                    chromeOptions.addArguments("--disable-notifications", "--disable-popup-blocking");
+
                     if (isHeadless) {
-                        chromeOptions.addArguments("--headless=new");
-                        chromeOptions.addArguments("--window-size=1920,1080");
-                        chromeOptions.addArguments("--no-sandbox");
-                        chromeOptions.addArguments("--disable-dev-shm-usage");
-                        chromeOptions.addArguments("--disable-gpu");
+                        chromeOptions.addArguments("--headless=new", "--window-size=1920,1080",
+                                "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu");
                     } else {
                         chromeOptions.addArguments("--start-maximized");
                     }
+
                     webDriver = new ChromeDriver(chromeOptions);
                 }
 
@@ -78,11 +73,12 @@ public class DriverFactory {
                 case "firefox" -> {
                     WebDriverManager.firefoxdriver().setup();
                     FirefoxOptions firefoxOptions = new FirefoxOptions();
+
                     if (isHeadless) {
                         firefoxOptions.addArguments("--headless");
-                        firefoxOptions.addArguments("--width=1920");
-                        firefoxOptions.addArguments("--height=1080");
+                        firefoxOptions.addArguments("--width=1920", "--height=1080");
                     }
+
                     webDriver = new FirefoxDriver(firefoxOptions);
                 }
 
@@ -90,41 +86,53 @@ public class DriverFactory {
                 // 🟣 Edge
                 // ==========================================================
                 case "edge" -> {
-                    WebDriverManager.edgedriver().setup();
                     EdgeOptions edgeOptions = new EdgeOptions();
                     edgeOptions.addArguments("--remote-allow-origins=*");
+                    edgeOptions.addArguments("--disable-notifications", "--disable-popup-blocking");
+
                     if (isHeadless) {
-                        // ✅ stable flags for CI
-                        edgeOptions.addArguments("--headless");
-                        edgeOptions.addArguments("--disable-gpu");
-                        edgeOptions.addArguments("--no-sandbox");
-                        edgeOptions.addArguments("--disable-dev-shm-usage");
-                        edgeOptions.addArguments("--window-size=1920,1080");
-                        edgeOptions.addArguments("--disable-extensions");
-                        edgeOptions.addArguments("--disable-logging");
+                        edgeOptions.addArguments("--headless", "--disable-gpu", "--no-sandbox",
+                                "--disable-dev-shm-usage", "--window-size=1920,1080",
+                                "--disable-extensions", "--disable-logging");
                     } else {
                         edgeOptions.addArguments("--start-maximized");
                     }
-                    edgeOptions.addArguments("--disable-notifications");
-                    edgeOptions.addArguments("--disable-popup-blocking");
+
+                    try {
+                        // Try online setup first
+                    	try {
+                    	    System.out.println("🧩 Trying to set up EdgeDriver via WebDriverManager...");
+                    	    WebDriverManager.edgedriver().setup();
+                    	} catch (Exception e) {
+                    	    System.err.println("⚠️ WebDriverManager failed to download EdgeDriver: " + e.getMessage());
+                    	    System.err.println("👉 Falling back to preinstalled EdgeDriver: /usr/local/bin/msedgedriver");
+                    	    System.setProperty("webdriver.edge.driver", "/usr/local/bin/msedgedriver");
+                    	}
+                    } catch (Exception e) {
+                        System.err.println("⚠️ WebDriverManager failed to download EdgeDriver: " + e.getMessage());
+                        System.err.println("👉 Falling back to system-installed msedgedriver at /usr/local/bin/msedgedriver");
+                        System.setProperty("webdriver.edge.driver", "/usr/local/bin/msedgedriver");
+                    }
+
                     webDriver = new EdgeDriver(edgeOptions);
                 }
 
                 // ==========================================================
-                //  Safari (MacOS)
+                // 🍏 Safari (MacOS)
                 // ==========================================================
                 case "safari" -> {
                     try {
                         System.out.println("🧩 Enabling SafariDriver...");
                         Runtime.getRuntime().exec("safaridriver --enable");
-                        Thread.sleep(2000); // Give time for permission grant
+                        Thread.sleep(1500);
 
                         webDriver = new SafariDriver();
-                        webDriver.manage().window().maximize();
-                        System.out.println("✅ Safari initialized successfully (UI mode)");
+                        try {
+                            webDriver.manage().window().maximize();
+                        } catch (Exception ignored) {}
+                        System.out.println("✅ Safari initialized successfully");
                     } catch (Exception e) {
                         System.err.println("⚠️ Failed to start Safari WebDriver: " + e.getMessage());
-                        e.printStackTrace();
                         throw new RuntimeException("Safari WebDriver initialization failed", e);
                     }
                 }
@@ -135,8 +143,7 @@ public class DriverFactory {
                 default -> throw new IllegalArgumentException("❌ Unsupported browser: " + browserName);
             }
 
-            System.out.println("✅ Browser initialized successfully: " + browserName
-                    + (isHeadless ? " (Headless)" : ""));
+            System.out.println("✅ Browser initialized successfully: " + browserName + (isHeadless ? " (Headless)" : ""));
             return webDriver;
 
         } catch (Exception e) {

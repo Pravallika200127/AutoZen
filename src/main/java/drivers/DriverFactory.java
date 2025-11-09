@@ -74,6 +74,9 @@ public class DriverFactory {
                     WebDriverManager.firefoxdriver().setup();
                     FirefoxOptions firefoxOptions = new FirefoxOptions();
 
+                    // 🔹 OPTIONAL: Set custom binary if needed
+                    // firefoxOptions.setBinary("C:\\Program Files\\Mozilla Firefox\\firefox.exe");
+
                     if (isHeadless) {
                         firefoxOptions.addArguments("--headless");
                         firefoxOptions.addArguments("--width=1920", "--height=1080");
@@ -81,6 +84,7 @@ public class DriverFactory {
 
                     webDriver = new FirefoxDriver(firefoxOptions);
                 }
+
 
                 // ==========================================================
                 // 🟣 Edge

@@ -9,9 +9,9 @@ import org.openqa.selenium.By;
 public class PageLocators {
     
     // ==================== Login/Authentication ====================
-    public static final By LOGIN_USERNAME_INPUT = By.id("username");
-    public static final By LOGIN_PASSWORD_INPUT = By.id("password");
-    public static final By LOGIN_SUBMIT_BUTTON = By.id("submitbtn");
+    public static final By LOGIN_USERNAME_INPUT = By.xpath("//form[@id='login']//input[@id='username' and @name='j_username' and @type='email']");
+    public static final By LOGIN_PASSWORD_INPUT = By.xpath("//form[@id='login']//input[@id='password' and @type='password']");
+    public static final By LOGIN_SUBMIT_BUTTON = By.xpath("//form[@id='login']//button[@id='submitbtn' and @type='submit']");
     public static final By LOGIN_ERROR_MESSAGE = By.xpath("//div[contains(@class, 'error-message') or contains(@class, 'alert-danger')]");
     public static final By LOGIN_FORGOT_PASSWORD_LINK = By.xpath("//a[contains(text(), 'Forgot Password')]");
 

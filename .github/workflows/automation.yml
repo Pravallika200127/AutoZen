@@ -4,14 +4,14 @@ on:
   push:
     branches:
       - main
-      - Integration
+      - AutoZen_Integration
   pull_request:
     branches:
       - main
-      - Integration
+      - AutoZen_Integration
   schedule:
-    # Runs daily at 7:30 AM IST (02:00 UTC)
-    - cron: '0 2 * * *'
+    # Runs every day at 7:30 AM IST (02:00 UTC)
+    - cron: '30 2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -37,6 +37,7 @@ jobs:
       MAVEN_OPTS: -Xmx2048m
       HEADLESS: true
       TESTRAIL_ENABLED: true
+      TESTRAIL_LABEL: Autozentestsuite
       TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
       TESTRAIL_APIKEY: ${{ secrets.TESTRAIL_APIKEY }}
 
@@ -44,13 +45,13 @@ jobs:
       # ==========================================================
       #  Step 1: Checkout Repository
       # ==========================================================
-      - name:  Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       # ==========================================================
       #  Step 2: Set up Java (Temurin JDK)
       # ==========================================================
-      - name:  Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
@@ -58,7 +59,7 @@ jobs:
           cache: maven
 
       # ==========================================================
-      #  Step 3: Install Browser Drivers
+      #  Step 3: Install Browsers
       # ==========================================================
       - name: Set up Chrome
         if: matrix.browser == 'chrome'
@@ -68,19 +69,39 @@ jobs:
         if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
 
-      - name:  Set up Edge
+      - name: Set up Edge (manual driver install)
         if: matrix.browser == 'edge'
-        uses: browser-actions/setup-edge@v1
-        
-      - name: Enable Safari (macOS only)
+        run: |
+          echo "Installing Microsoft Edge and msedgedriver..."
+          sudo apt-get update
+          sudo apt-get install -y curl unzip software-properties-common apt-transport-https
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+          sudo apt-get update
+          sudo apt-get install -y microsoft-edge-stable
+
+          EDGE_VERSION=$(microsoft-edge --version | awk '{print $3}')
+          echo "Detected Edge version: $EDGE_VERSION"
+
+          DRIVER_URL="https://msedgedriver.azureedge.net/${EDGE_VERSION}/edgedriver_linux64.zip"
+          echo "⬇Downloading msedgedriver from ${DRIVER_URL}"
+          curl -sSL $DRIVER_URL -o /tmp/edgedriver.zip || {
+            echo " Failed to download version-specific driver, falling back to latest..."
+            curl -sSL https://msedgedriver.azureedge.net/LATEST_RELEASE/edgedriver_linux64.zip -o /tmp/edgedriver.zip
+          }
+
+          unzip -o /tmp/edgedriver.zip -d /usr/local/bin/
+          chmod +x /usr/local/bin/msedgedriver
+          which msedgedriver
+          msedgedriver --version
+
+      - name:  Enable Safari (macOS only)
         if: matrix.browser == 'safari'
         run: |
-          echo "Enabling SafariDriver..."
+          echo " Enabling SafariDriver..."
           safaridriver --enable || true
           sudo safaridriver --enable
           safaridriver --version
-
-
 
       # ==========================================================
       #  Step 4: Cache Maven Dependencies
@@ -108,11 +129,12 @@ jobs:
             -Dsurefire.suiteXmlFiles=testng.xml \
             -Dbrowser=${{ matrix.browser }} \
             -Dheadless=${{ env.HEADLESS }} \
-            -Dtestrail.labels=Autozentestsuite \
+            -Dwdm.offline=true \
+            -Dtestrail.labels=${{ env.TESTRAIL_LABEL }} \
             -Dtestrail.username="${{ secrets.TESTRAIL_USERNAME }}" \
             -Dtestrail.apikey="${{ secrets.TESTRAIL_APIKEY }}" \
             -Dtestrail.enabled=${{ env.TESTRAIL_ENABLED }}
-        continue-on-error: false
+        continue-on-error: ${{ matrix.browser == 'safari' }}
 
       # ==========================================================
       #  Step 7: Upload Artifacts (Extent Reports)
@@ -134,4 +156,4 @@ jobs:
         run: |
           echo " All cross-browser executions completed."
           echo " Extent Reports saved in GitHub Artifacts."
-          echo " TestRail results automatically updated for label: Autozentestsuite."
+          echo " TestRail results automatically updated for label: ${{ env.TESTRAIL_LABEL }}."

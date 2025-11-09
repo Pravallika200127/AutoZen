@@ -99,7 +99,7 @@ public class VerificationHelper {
     public boolean verifyTopNavigation(String elementName) {
         System.out.println("🔍 Verifying top navigation: " + elementName);
         switch(elementName.toLowerCase()) {
-            case "bits_logo":
+            case "bits Logo and Name":
                 return verifyElementDisplayed(PageLocators.BITS_LOGO, elementName);
                 
             case "student name":

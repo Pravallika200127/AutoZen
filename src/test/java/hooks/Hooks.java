@@ -20,10 +20,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * ✅ FINAL Hooks:
- * - Stepwise Base64 screenshots with Extent Reports
- * - Parallel-safe scenario tracking via ThreadLocal
- * - Full TestRail integration with run, result & defect management
+ * ✅ Complete Hooks with:
+ * - Step-wise Base64 screenshots with highlighting
+ * - Parallel-safe scenario tracking
+ * - Full TestRail integration with defect management
  */
 public class Hooks implements ConcurrentEventListener {
 
@@ -72,16 +72,28 @@ public class Hooks implements ConcurrentEventListener {
             String durationInfo = String.format("(⏱ %d ms)", duration);
 
             if (error != null) {
+                // 🔴 Step failed - capture failure info
                 failureError.set(error);
                 failureStep.set(stepText);
                 ExtentReportManager.logStep("fail", stepText + " " + durationInfo, drv, error);
+
+                // 🟩 NEW: inline screenshot for failed step
+                ExtentReportManager.logStepInline(drv, "FAIL", "Inline Failure Screenshot", error);
+
+                System.err.println("❌ Step failed: " + stepText);
+                System.err.println("    Error: " + error.getMessage());
             } else {
+                // ✅ Step passed
                 ExtentReportManager.logStep("pass", stepText + " " + durationInfo, drv, null);
+
+                // 🟩 NEW: inline screenshot for passed step
+                ExtentReportManager.logStepInline(drv, "PASS", stepText + " (Inline Screenshot)");
             }
         } catch (Exception e) {
             System.err.println("⚠️ Error logging step: " + e.getMessage());
         }
     }
+
 
     // ==========================================================
     // 🔹 Before All
@@ -140,7 +152,11 @@ public class Hooks implements ConcurrentEventListener {
     // ==========================================================
     @Before
     public void beforeScenario(Scenario scenario) {
+        System.out.println("\n" + "=".repeat(80));
         System.out.println("🧠 Starting Scenario: " + scenario.getName());
+        System.out.println("=".repeat(80));
+        
+        // Clear previous scenario data
         failureError.remove();
         failureStep.remove();
         currentStep.remove();
@@ -158,129 +174,254 @@ public class Hooks implements ConcurrentEventListener {
                     ExtentReportManager.assignCategory(scenario.getName(), tag.replace("@", "")));
 
         } catch (Exception e) {
+            System.err.println("❌ Scenario setup failed: " + e.getMessage());
             ExtentReportManager.logFail(scenario.getName(), "⚠️ Scenario setup failed: " + e.getMessage());
         }
     }
 
     // ==========================================================
-    // 🔹 After Each Scenario
+    // 🔹 After Each Scenario - WITH DEFECT CREATION
     // ==========================================================
     @After
     public void afterScenario(Scenario scenario) {
         WebDriver drv = driver.get();
-        boolean passed = !scenario.isFailed(); // keep a concrete flag for TestRail update
+        boolean passed = !scenario.isFailed();
 
         try {
             // Log scenario result in Extent
             if (scenario.isFailed()) {
                 passed = false;
+                System.err.println("\n❌ SCENARIO FAILED: " + scenario.getName());
+                
                 ExtentReportManager.logFail(scenario.getName(),
-                        "❌ Scenario failed at step: " + scenario.getName());
-                if (drv != null)
-                    ExtentReportManager.captureAndAttachScreenshot(scenario.getName(), drv, "Failure Screenshot");
+                        "❌ Scenario failed at step: " + failureStep.get());
+                
+                if (drv != null) {
+                    ExtentReportManager.captureAndAttachScreenshot(scenario.getName(), drv, "Final Failure Screenshot");
+                }
             } else {
+                System.out.println("\n✅ SCENARIO PASSED: " + scenario.getName());
                 ExtentReportManager.logPass(scenario.getName(), "✅ Scenario passed successfully");
             }
 
-            // ✅ Update TestRail
+            // ✅ Update TestRail & Create Defect if Failed
             if (testRailEnabled && testRailClient != null) {
                 Integer caseId = extractCaseId(scenario);
                 if (caseId != null) {
-                    String comment = "**Scenario:** " + scenario.getName() +
-                            "\n**Status:** " + (passed ? "✅ PASSED" : "❌ FAILED") +
-                            "\n**Execution Time:** " + LocalDateTime.now()
-                                    .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-
+                    System.out.println("\n📊 Updating TestRail for Case C" + caseId);
+                    
+                    String comment = buildTestRailComment(scenario, passed);
                     Integer resultId = testRailClient.updateTestResult(caseId, passed, comment);
+                    
+                    System.out.println("✅ TestRail result updated (Result ID: " + resultId + ")");
 
-                 // Force flush before upload to ensure ExtentReport.html exists
+                    // 🐛 CREATE DEFECT IF FAILED
+                    if (!passed && resultId != null) {
+                        System.out.println("\n🐛 Test failed - Creating detailed defect in TestRail...");
+                        createDetailedDefect(scenario, caseId, resultId);
+                    }
+
+                    // Force flush before upload to ensure ExtentReport.html exists
                     ExtentReportManager.flushReports();
 
+                    // Upload Extent Report to TestRail
                     File extentFile = new File(ExtentReportManager.getReportPath());
                     if (extentFile.exists() && extentFile.length() > 1000) {
                         System.out.println("📤 Uploading ExtentReport.html to TestRail...");
-                        testRailClient.uploadAttachmentToResult(resultId, extentFile);
+                        boolean uploaded = testRailClient.uploadAttachmentToResult(resultId, extentFile);
+                        if (uploaded) {
+                            System.out.println("✅ ExtentReport uploaded successfully");
+                        }
                     } else {
-                        System.err.println("⚠️ ExtentReport.html missing or empty — skipping TestRail upload.");
+                        System.err.println("⚠️ ExtentReport.html missing or empty — skipping upload.");
                     }
-                } }}
-         catch (Exception e) {
+                }
+            }
+            
+        } catch (Exception e) {
             System.err.println("⚠️ afterScenario error: " + e.getMessage());
+            e.printStackTrace();
         } finally {
-            if (drv != null) DriverFactory.quitDriver();
+            if (drv != null) {
+                System.out.println("🔒 Closing browser...");
+                DriverFactory.quitDriver();
+            }
             driver.remove();
             ExtentReportManager.clearCurrentScenario();
+            
+            System.out.println("=".repeat(80) + "\n");
         }
     }
-            
 
     // ==========================================================
     // 🔹 Utility Methods
     // ==========================================================
-    private static File saveScreenshotToFile(byte[] bytes, String scenarioName) {
-        try {
-            File dir = new File("test-output/screenshots");
-            if (!dir.exists()) dir.mkdirs();
-            String fname = scenarioName.replaceAll("[^a-zA-Z0-9]", "_") + "_" + System.currentTimeMillis() + ".png";
-            File file = new File(dir, fname);
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                fos.write(bytes);
-            }
-            return file;
-        } catch (Exception e) {
-            System.err.println("⚠️ Screenshot saving failed: " + e.getMessage());
-            return null;
+    
+    /**
+     * Build TestRail comment with execution details
+     */
+    private String buildTestRailComment(Scenario scenario, boolean passed) {
+        StringBuilder comment = new StringBuilder();
+        comment.append("**Scenario:** ").append(scenario.getName()).append("\n");
+        comment.append("**Status:** ").append(passed ? "✅ PASSED" : "❌ FAILED").append("\n");
+        comment.append("**Execution Time:** ").append(
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        ).append("\n");
+        
+        if (!passed && failureStep.get() != null) {
+            comment.append("**Failed Step:** ").append(failureStep.get()).append("\n");
         }
+        
+        if (!passed && failureError.get() != null) {
+            comment.append("**Error:** ").append(failureError.get().getMessage()).append("\n");
+        }
+        
+        return comment.toString();
     }
 
+    /**
+     * Extract TestRail case ID from scenario tags
+     */
     private Integer extractCaseId(Scenario s) {
-        for (String tag : s.getSourceTagNames())
-            if (tag.matches("@CaseID_\\d+") || tag.matches("@C\\d+"))
+        for (String tag : s.getSourceTagNames()) {
+            if (tag.matches("@CaseID_\\d+") || tag.matches("@C\\d+")) {
                 return Integer.parseInt(tag.replaceAll("[^0-9]", ""));
+            }
+        }
         return null;
     }
 
+    /**
+     * Create detailed defect in TestRail with full context
+     */
     private void createDetailedDefect(Scenario scenario, int caseId, int resultId) {
-        Throwable error = failureError.get();
-        String failedStep = failureStep.get();
+        try {
+            Throwable error = failureError.get();
+            String failedStep = failureStep.get();
 
-        String failureType = analyzeFailureType(error);
-        String priority = determinePriority(failureType);
+            if (error == null) {
+                System.out.println("⚠️ No error information available for defect creation");
+                return;
+            }
 
-        String failureMessage = buildFailureMessage(error, failedStep, failureType, priority);
-        String stack = getStackTrace(error);
+            String failureType = analyzeFailureType(error);
+            String priority = determinePriority(failureType);
 
-        testRailClient.createDefect("C" + caseId, scenario.getName(), failureMessage, stack);
+            String failureMessage = buildFailureMessage(error, failedStep, failureType, priority);
+            String stack = getStackTrace(error);
+
+            System.out.println("   📋 Failure Type: " + failureType);
+            System.out.println("   ⚠️ Priority: " + priority);
+            System.out.println("   📍 Failed Step: " + failedStep);
+
+            boolean defectCreated = testRailClient.createDefect(
+                "C" + caseId, 
+                scenario.getName(), 
+                failureMessage, 
+                stack
+            );
+
+            if (defectCreated) {
+                System.out.println("✅ Defect created successfully in TestRail");
+            } else {
+                System.err.println("❌ Failed to create defect in TestRail");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error creating defect: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    private String buildFailureMessage(Throwable error, String step, String type, String pr) {
-        return "📍 Failed Step: " + step + "\n📌 Type: " + type + "\n⚠️ Priority: " + pr +
-                (error != null ? "\n\n❌ Error: " + error.getMessage() : "");
+    /**
+     * Build comprehensive failure message
+     */
+    private String buildFailureMessage(Throwable error, String step, String type, String priority) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("═══════════════════════════════════════════════════\n");
+        msg.append("🔴 TEST FAILURE DETAILS\n");
+        msg.append("═══════════════════════════════════════════════════\n\n");
+        msg.append("📍 Failed Step: ").append(step != null ? step : "Unknown").append("\n");
+        msg.append("📌 Failure Type: ").append(type).append("\n");
+        msg.append("⚠️ Priority: ").append(priority).append("\n");
+        msg.append("⏰ Timestamp: ").append(LocalDateTime.now().format(
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        )).append("\n\n");
+        
+        if (error != null) {
+            msg.append("❌ Error Message:\n");
+            msg.append("───────────────────────────────────────────────────\n");
+            msg.append(error.getMessage()).append("\n");
+            msg.append("───────────────────────────────────────────────────\n");
+        }
+        
+        return msg.toString();
     }
 
+    /**
+     * Get full stack trace as string
+     */
     private String getStackTrace(Throwable e) {
-        if (e == null) return "No stack trace";
+        if (e == null) return "No stack trace available";
         StringWriter sw = new StringWriter();
         e.printStackTrace(new PrintWriter(sw));
         return sw.toString();
     }
 
+    /**
+     * Analyze failure type from exception
+     */
     private String analyzeFailureType(Throwable e) {
         if (e == null) return "UNKNOWN";
+        
         String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
         String cls = e.getClass().getSimpleName().toLowerCase();
-        if (msg.contains("nosuchelement")) return "ELEMENT_NOT_FOUND";
-        if (msg.contains("timeout")) return "TIMEOUT";
-        if (msg.contains("assert")) return "ASSERTION_FAILURE";
+        
+        if (msg.contains("nosuchelement") || cls.contains("nosuchelement")) {
+            return "ELEMENT_NOT_FOUND";
+        }
+        if (msg.contains("timeout") || cls.contains("timeout")) {
+            return "TIMEOUT";
+        }
+        if (msg.contains("assertion") || msg.contains("assert") || cls.contains("assertion")) {
+            return "ASSERTION_FAILURE";
+        }
+        if (msg.contains("stale") || cls.contains("stale")) {
+            return "STALE_ELEMENT";
+        }
+        if (msg.contains("clickintercepted") || cls.contains("clickintercepted")) {
+            return "CLICK_INTERCEPTED";
+        }
+        
         return cls.toUpperCase();
     }
 
+    /**
+     * Determine priority based on failure type
+     */
     private String determinePriority(String type) {
         return switch (type) {
-            case "ELEMENT_NOT_FOUND", "TIMEOUT" -> "🔴 HIGH";
-            case "ASSERTION_FAILURE" -> "🟡 MEDIUM";
+            case "ELEMENT_NOT_FOUND", "TIMEOUT", "STALE_ELEMENT" -> "🔴 HIGH";
+            case "ASSERTION_FAILURE", "CLICK_INTERCEPTED" -> "🟡 MEDIUM";
             default -> "🟢 LOW";
         };
+    }
+
+    /**
+     * Public method for SeleniumActions to set failure info
+     */
+    public static void setFailureInfo(String errorMessage, Throwable throwable) {
+        failureError.set(throwable);
+        
+        // Extract step from current context if available
+        String step = currentStep.get();
+        if (step != null) {
+            failureStep.set(step + " - " + errorMessage);
+        } else {
+            failureStep.set(errorMessage);
+        }
+        
+        System.err.println("🔴 Failure captured: " + errorMessage);
     }
 
     // ==========================================================
@@ -289,12 +430,22 @@ public class Hooks implements ConcurrentEventListener {
     @AfterAll
     public static void afterAll() {
         try {
-            System.out.println("📄 Finalizing Extent Reports...");
+            System.out.println("\n" + "=".repeat(80));
+            System.out.println("📄 Finalizing Test Suite...");
+            System.out.println("=".repeat(80));
+            
             ExtentReportManager.flushReports();
-            if (testRailEnabled && runId > 0)
+            
+            if (testRailEnabled && runId > 0) {
+                System.out.println("🏁 Closing TestRail Run R" + runId + "...");
                 testRailClient.closeTestRun();
-        } catch (Exception ignored) {}
-        System.out.println("💾 Extent Report flushed successfully at suite end.");
+            }
+            
+            System.out.println("✅ Test suite completed successfully");
+            System.out.println("=".repeat(80));
+            
+        } catch (Exception e) {
+            System.err.println("⚠️ Error in afterAll: " + e.getMessage());
+        }
     }
-
 }

@@ -68,32 +68,10 @@ jobs:
       - name: Set up Firefox
         if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
-
-      - name: Set up Edge (manual driver install)
+  
+      - name:  Set up Edge
         if: matrix.browser == 'edge'
-        run: |
-          echo "Installing Microsoft Edge and msedgedriver..."
-          sudo apt-get update
-          sudo apt-get install -y curl unzip software-properties-common apt-transport-https
-          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-          sudo apt-get update
-          sudo apt-get install -y microsoft-edge-stable
-
-          EDGE_VERSION=$(microsoft-edge --version | awk '{print $3}')
-          echo "Detected Edge version: $EDGE_VERSION"
-
-          DRIVER_URL="https://msedgedriver.azureedge.net/${EDGE_VERSION}/edgedriver_linux64.zip"
-          echo "⬇Downloading msedgedriver from ${DRIVER_URL}"
-          curl -sSL $DRIVER_URL -o /tmp/edgedriver.zip || {
-            echo " Failed to download version-specific driver, falling back to latest..."
-            curl -sSL https://msedgedriver.azureedge.net/LATEST_RELEASE/edgedriver_linux64.zip -o /tmp/edgedriver.zip
-          }
-
-          unzip -o /tmp/edgedriver.zip -d /usr/local/bin/
-          chmod +x /usr/local/bin/msedgedriver
-          which msedgedriver
-          msedgedriver --version
+        uses: browser-actions/setup-edge@v1
 
       - name:  Enable Safari (macOS only)
         if: matrix.browser == 'safari'

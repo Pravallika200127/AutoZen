@@ -1,4 +1,4 @@
-name: AutoZen Cross-Browser CI/CD Pipeline
+name: 🧩 AutoZen Cross-Browser CI/CD Pipeline
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
       - main
       - AutoZen_Integration
   schedule:
-    # Runs every day at 7:30 AM IST (02:00 UTC)
+    # 🕖 Runs every day at 7:30 AM IST (02:00 UTC)
     - cron: '30 2 * * *'
   workflow_dispatch:
 
@@ -45,13 +45,13 @@ jobs:
       # ==========================================================
       #  Step 1: Checkout Repository
       # ==========================================================
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
       # ==========================================================
       #  Step 2: Set up Java (Temurin JDK)
       # ==========================================================
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
@@ -61,51 +61,48 @@ jobs:
       # ==========================================================
       #  Step 3: Install Browsers
       # ==========================================================
-      - name: Set up Chrome
+      - name: 🧩 Set up Chrome
         if: matrix.browser == 'chrome'
         uses: browser-actions/setup-chrome@v1
 
-      - name: Set up Firefox
+      - name: 🧩 Set up Firefox
         if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
-  
-      - name: Set up Edge (manual driver install)
-  if: matrix.browser == 'edge'
-  run: |
-    echo "Installing Microsoft Edge + matching EdgeDriver..."
-    sudo apt-get update
-    sudo apt-get install -y curl unzip software-properties-common apt-transport-https
 
-    # Add Microsoft repo
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-    sudo apt-get update
-    sudo apt-get install -y microsoft-edge-stable
+      - name: 🧩 Set up Edge (manual driver install)
+        if: matrix.browser == 'edge'
+        run: |
+          echo "🧩 Installing Microsoft Edge + matching EdgeDriver..."
+          sudo apt-get update
+          sudo apt-get install -y curl unzip software-properties-common apt-transport-https
 
-    # Detect Edge version
-    EDGE_VERSION=$(microsoft-edge --version | awk '{print $3}')
-    echo " Detected Edge version: $EDGE_VERSION"
+          # Add Microsoft Edge repo
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+          sudo apt-get update
+          sudo apt-get install -y microsoft-edge-stable
 
-    # Download exact matching EdgeDriver
-    DRIVER_URL="https://msedgedriver.azureedge.net/${EDGE_VERSION}/edgedriver_linux64.zip"
-    echo " Downloading EdgeDriver from $DRIVER_URL"
-    curl -sSL "$DRIVER_URL" -o /tmp/edgedriver.zip || {
-      echo " Could not find version-specific EdgeDriver — downloading latest stable..."
-      curl -sSL https://msedgedriver.azureedge.net/LATEST_RELEASE/edgedriver_linux64.zip -o /tmp/edgedriver.zip
-    }
+          # Detect and match EdgeDriver version
+          EDGE_VERSION=$(microsoft-edge --version | awk '{print $3}')
+          echo "🔍 Detected Edge version: $EDGE_VERSION"
 
-    unzip -o /tmp/edgedriver.zip -d /usr/local/bin/
-    chmod +x /usr/local/bin/msedgedriver
-    which msedgedriver
-    msedgedriver --version
+          DRIVER_URL="https://msedgedriver.azureedge.net/${EDGE_VERSION}/edgedriver_linux64.zip"
+          echo "⬇️ Downloading EdgeDriver from $DRIVER_URL"
+          curl -sSL "$DRIVER_URL" -o /tmp/edgedriver.zip || {
+            echo "⚠️ Could not fetch version-specific driver, downloading latest stable..."
+            curl -sSL https://msedgedriver.azureedge.net/LATEST_RELEASE/edgedriver_linux64.zip -o /tmp/edgedriver.zip
+          }
 
-    echo " Microsoft Edge + EdgeDriver installed successfully."
+          unzip -o /tmp/edgedriver.zip -d /usr/local/bin/
+          chmod +x /usr/local/bin/msedgedriver
+          which msedgedriver
+          msedgedriver --version
+          echo "✅ Microsoft Edge + EdgeDriver installed successfully."
 
-
-      - name:  Enable Safari (macOS only)
+      - name: 🧩 Enable Safari (macOS only)
         if: matrix.browser == 'safari'
         run: |
-          echo " Enabling SafariDriver..."
+          echo "✅ Enabling SafariDriver..."
           safaridriver --enable || true
           sudo safaridriver --enable
           safaridriver --version
@@ -113,7 +110,7 @@ jobs:
       # ==========================================================
       #  Step 4: Cache Maven Dependencies
       # ==========================================================
-      - name:  Cache Maven Dependencies
+      - name: 📦 Cache Maven Dependencies
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
@@ -123,15 +120,15 @@ jobs:
       # ==========================================================
       #  Step 5: Build Project
       # ==========================================================
-      - name:  Build Project
+      - name: ⚙️ Build Project
         run: mvn clean compile -B
 
       # ==========================================================
       #  Step 6: Run Cross-Browser Tests
       # ==========================================================
-      - name:  Run Tests on ${{ matrix.browser }}
+      - name: 🚀 Run Tests on ${{ matrix.browser }}
         run: |
-          echo " Running tests on ${{ matrix.browser }}..."
+          echo "🧪 Running tests on ${{ matrix.browser }}..."
           mvn test \
             -Dsurefire.suiteXmlFiles=testng.xml \
             -Dbrowser=${{ matrix.browser }} \
@@ -146,7 +143,7 @@ jobs:
       # ==========================================================
       #  Step 7: Upload Artifacts (Extent Reports)
       # ==========================================================
-      - name:  Upload Extent Report (${{ matrix.browser }})
+      - name: 📊 Upload Extent Report (${{ matrix.browser }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -158,9 +155,9 @@ jobs:
       # ==========================================================
       #  Step 8: Summary
       # ==========================================================
-      - name:  Summary
+      - name: 🧾 Summary
         if: always()
         run: |
-          echo " All cross-browser executions completed."
-          echo " Extent Reports saved in GitHub Artifacts."
-          echo " TestRail results automatically updated for label: ${{ env.TESTRAIL_LABEL }}."
+          echo "✅ All cross-browser executions completed."
+          echo "💾 Extent Reports saved in GitHub Artifacts."
+          echo "🔗 TestRail results automatically updated for label: ${{ env.TESTRAIL_LABEL }}."

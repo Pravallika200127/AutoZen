@@ -57,38 +57,29 @@ jobs:
           distribution: temurin
           cache: maven
 
-            # ==========================================================
+      # ==========================================================
       #  Step 3: Install Browser Drivers
       # ==========================================================
-      - name: 🧩 Set up Chrome
+      - name: Set up Chrome
         if: matrix.browser == 'chrome'
         uses: browser-actions/setup-chrome@v1
 
-      - name: 🧩 Set up Firefox
+      - name: Set up Firefox
         if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
 
-      - name: 🧩 Set up Edge (with driver fix)
+      - name:  Set up Edge
         if: matrix.browser == 'edge'
-        run: |
-          echo "🧩 Installing Edge + WebDriver..."
-          sudo apt-get update
-          sudo apt-get install -y microsoft-edge-stable
-          EDGE_VERSION=$(microsoft-edge --version | awk '{print $3}')
-          echo "🔍 Edge version: $EDGE_VERSION"
-          wget -q "https://msedgedriver.azureedge.net/${EDGE_VERSION}/edgedriver_linux64.zip" -O /tmp/edgedriver.zip || true
-          unzip -o /tmp/edgedriver.zip -d /usr/local/bin/ || true
-          chmod +x /usr/local/bin/msedgedriver
-          which msedgedriver
-          msedgedriver --version
-
-      - name: 🧩 Enable Safari (macOS only)
+        uses: browser-actions/setup-edge@v1
+        
+      - name: Enable Safari (macOS only)
         if: matrix.browser == 'safari'
         run: |
-          echo "✅ Enabling SafariDriver..."
+          echo "Enabling SafariDriver..."
           safaridriver --enable || true
           sudo safaridriver --enable
           safaridriver --version
+
 
 
       # ==========================================================

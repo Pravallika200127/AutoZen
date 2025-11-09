@@ -99,23 +99,16 @@ public class DriverFactory {
                     }
 
                     try {
-                        // Try online setup first
-                    	try {
-                    	    System.out.println("🧩 Trying to set up EdgeDriver via WebDriverManager...");
-                    	    WebDriverManager.edgedriver().setup();
-                    	} catch (Exception e) {
-                    	    System.err.println("⚠️ WebDriverManager failed to download EdgeDriver: " + e.getMessage());
-                    	    System.err.println("👉 Falling back to preinstalled EdgeDriver: /usr/local/bin/msedgedriver");
-                    	    System.setProperty("webdriver.edge.driver", "/usr/local/bin/msedgedriver");
-                    	}
+                        System.out.println("🧩 Attempting EdgeDriver setup via WebDriverManager...");
+                        WebDriverManager.edgedriver().setup();
                     } catch (Exception e) {
-                        System.err.println("⚠️ WebDriverManager failed to download EdgeDriver: " + e.getMessage());
-                        System.err.println("👉 Falling back to system-installed msedgedriver at /usr/local/bin/msedgedriver");
+                        System.err.println("⚠️ WebDriverManager failed, using system-installed driver");
                         System.setProperty("webdriver.edge.driver", "/usr/local/bin/msedgedriver");
                     }
 
                     webDriver = new EdgeDriver(edgeOptions);
                 }
+
 
                 // ==========================================================
                 // 🍏 Safari (MacOS)
